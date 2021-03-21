@@ -1,9 +1,9 @@
 # Define required macros here
 CC = Clang
-SHA_256_SOURCE =  sha256.c
+SHA_512_SOURCE =  sha512.c
 TEST_SOURCE = test.c
-OUTPUT_PROGRAM = sha256
-OUTPUT_TEST = test_sha256
+OUTPUT_PROGRAM = sha512
+OUTPUT_TEST = test_sha512
 
 all:
 	make clean
@@ -17,7 +17,7 @@ clean:
 
 #Compile program for tests
 compile: 
-	${CC} ${SHA_256_SOURCE} -o ${OUTPUT_PROGRAM}
+	${CC} ${SHA_512_SOURCE} -o ${OUTPUT_PROGRAM}
 
 #Test needs compiled program to run tests
 test:

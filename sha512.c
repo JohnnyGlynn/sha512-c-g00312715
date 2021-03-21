@@ -23,3 +23,6 @@ int main() {
 
     return 0;
 }
+
+//Steps for Sha-256
+
