@@ -3,10 +3,13 @@
 
 
 ### This Repo contains...
-test.txt - quick brown fox - 344 bits / 43 Byte file
-sha512.c - SHA512 algorithim implemented in C
-Makefile - EZ setup
-Test.c - Test file for sha512.c
+test.txt - quick brown fox - 344 bits / 43 Byte file\
+sha512.c - SHA512 algorithim implemented in C\
+Makefile - EZ setup\
+Test.c - Test file for sha512.c\
+README.md - Hello.
+
+ddawddawd
 ### Run this
 `make do this`\
 `make stuff & things`\
