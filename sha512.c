@@ -54,6 +54,11 @@ WORD H[] = {
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
 };
 
+unsigned int preprocessor(){
+    return 0;
+}
+
+
 int main() {
     FILE *file;
     char filepath[255], out;
