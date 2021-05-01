@@ -4,7 +4,8 @@
 #define W64 64
 
 #define WORD uint64_t
-//#define PF PRIX64
+#define BYTE uint8_t
+#define PF PRIX64
 
 //preprocessor version of ch (no overhead)
 #define CH(x,y,z) (x&y)^(~x&z)
@@ -54,31 +55,53 @@ WORD H[] = {
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
 };
 
+union Block{
+    BYTE bytes[128]; //1024 bits == 128 Bytes. 128 x 8 = 1024
+    WORD words[16]; //16 64 bit words == 1024 bits/128 Bytes. 16 x 64 = 1024
+    __uint128_t msglen[8]; //message lenght. 8 x 128 = 1024 
+};
+
+//cant change array size (sort of)
+// union Block chain[] = {};
+
+unsigned int padding(){
+
+    //get lenght L of input message M in bits
+
+    //append 1 bit at message end
+
+    //append k 0 bits where k is a non negative solution to
+    // l + 1 bit + k = 896mod1024() 
+    // explained better here: https://crypto.stackexchange.com/questions/58403/why-is-modulo-being-used-for-congruence-in-sha-2-padding-when-the-outcome-is-alw
+    //"Another way to phrase ‘a multiple of 1024 plus 896’ is ‘a multiple of 1024 minus 128’. 
+    //The point is that we're adding the smallest amount of padding that will fill a 1024-bit 
+    //block with room to append the length of the message as a 128-bit integer at the end."
+    //key here is (message in bits) + (1 bit) + (K number of 0 bits so that the padded message is 1024 or a multiple of)
+    //895 bit message = 1 bit and k=0 0 bits of padding. 895+1+128 bit lenght block = 1024
+    //‘a multiple of 1024 minus 128’
+
+    // Append the length of the message as a 128 bit block
+
+    return 0;
+}
+
+
+
 unsigned int preprocessor(){
     return 0;
 }
 
 
-int main() {
-    FILE *file;
-    char filepath[255], out;
+int main(char *argv[]) {
 
-    printf("Enter a file path: ");
-    scanf("%s", &filepath);
+    //File pointer
+    FILE *f;
 
-    file = fopen(&filepath, "r");
-    if (file == NULL) 
-    { 
-        printf("Cannot open file \n"); 
-        return 0;
-    } 
+    //open file
+    f = fopen(argv[1], "r");
 
-    printf("Ive opened a file\n");
-    fscanf(file,"%c", &out);
+    //call preprocessor 
 
-    printf("Value of %c \n", out);
-
-    fclose(file); 
 
     return 0;
 }
