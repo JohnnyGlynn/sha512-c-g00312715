@@ -64,61 +64,110 @@ enum Status{
 union Block{
     BYTE bytes[128]; //1024 bits == 128 Bytes. 128 x 8 = 1024
     WORD words[16]; //16 64 bit words == 1024 bits/128 Bytes. 16 x 64 = 1024
-    __uint128_t msglen[8]; //message lenght. 8 x 128 = 1024 
-    //uint64_t msglen[16]; //16 x 64 = 1024
+    // __uint128_t msglen[8]; //message lenght. 8 x 128 = 1024 
+    uint64_t msglen[16]; //16 x 64 = 1024
 };
 
 //cant change array size (sort of)
 // union Block chain[] = {};
 //unsigned int padding(FILE *f, union Block *B, enum Status *S, __uint128_t *nobits){
-unsigned int padding(FILE *f, union Block *B, __uint128_t *nobits){
+unsigned int padding(FILE *f, union Block *M, __uint128_t *nobits, enum Status *FLAG){
 
     //bytes read
     ssize_t nobytes;
 
-    nobytes = fread(B->bytes, 1, 128, f);
+    // nobytes = fread(B->bytes, 1, 128, f);
 
-    //get lenght L of input message M in bits
-    *nobits = *nobits + (8 * nobytes);
+    // //get lenght L of input message M in bits
+    // *nobits = *nobits + (8 * nobytes);
 
-    if (nobytes == 43){
-        printf("Hello there");
-    };
+    // size_t l = *nobits;
+    // size_t l1 = l + 1;
+    // size_t l1mod =
+    // size_t k = 
 
-    //append 1 bit at message end
+    if(*FLAG == END){
+        //the end
+        return 0;
+        printf("Ive ended");
+    }else if(*FLAG == READ){
+        //length in bytes
+        nobytes = fread(M->bytes, 1, 128, f);
+        printf("Ive read\n");
 
-    //append k 0 bits where k is a non negative solution to
-    // l + 1 bit + k = 896mod1024() 
-    // explained better here: https://crypto.stackexchange.com/questions/58403/why-is-modulo-being-used-for-congruence-in-sha-2-padding-when-the-outcome-is-alw
-    //"Another way to phrase ‘a multiple of 1024 plus 896’ is ‘a multiple of 1024 minus 128’. 
-    //The point is that we're adding the smallest amount of padding that will fill a 1024-bit 
-    //block with room to append the length of the message as a 128-bit integer at the end."
-    //key here is (message in bits) + (1 bit) + (K number of 0 bits so that the padded message is 1024 or a multiple of)
-    //895 bit message = 1 bit and k=0 0 bits of padding. 895+1+128 bit lenght block = 1024
-    //‘a multiple of 1024 minus 128’
+        //get lenght L of input message M in bits
+        *nobits = *nobits + (8 * nobytes);
 
-    // Append the length of the message as a 128 bit block
+        if (nobytes == 128)
+        {
+            /* code */
+            printf("128\n");
+        }else if (nobytes < 112){
 
-    
+            M->bytes[nobytes] = 0x80; // In bits: 10000000.
+            
+            for (nobytes++; nobytes < 112; nobytes++) {
+                M->bytes[nobytes] = 0x00; // In bits: 00000000
+            }
+            
+            M->msglen[15] = *nobits;
+            printf("last block\n");
+
+            // Say this is the last block.
+            *FLAG = END;
+        } else{
+            M->bytes[nobytes] = 0x80;//1 bit 7 0 bits
+            printf("Need another one\n");
+
+            for (nobytes++; nobytes < 128; nobytes++){
+                //post mortem: trying to write to B->nobytes[64]
+                M->bytes[nobytes] = 0x00; //8 0 bits
+            }
+            // change the status to PAD.
+            *FLAG = PAD;
+        }
+    }else if(*FLAG == PAD){
+        printf("Im the other one\n");
+
+        for (nobytes = 0; nobytes < 112; nobytes++) {
+            M->bytes[nobytes] = 0x00; // In bits: 00000000
+        }
+        // Append nobits as a big endian integer.
+        M->msglen[15] = *nobits;
+        // Change the status to END.
+        *FLAG = END;
+    }
+
+    // //verify test.txt bytes
+    // if (nobytes == 43){
+    //     printf("Hello there\n");
+    // };
+    // //verify test.txt bits
+    // if (*nobits == 344){
+    //     printf("General Kenobi\n");
+    // }
+    // if (l1 == 346){ //not great
+    //     printf("345 bits\n");
+    // }
 
     return 1;
-
-
 
 }
 
 
 
-unsigned int preprocessor(){
+unsigned int hash(){
     return 0;
 }
 
 
 int main(int argc, char *argv[]) {
-    //int i;
+    int i;
     union Block M;
     //File pointer
     FILE *f;
+
+    enum Status FLAG = READ;
 
     __uint128_t nobits = 0;
 
@@ -129,8 +178,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    padding(f, &M, &nobits);
-
+    while(padding(f, &M, &nobits, &FLAG)){
+        for(i = 0; i < 32; i++){
+            printf("%08" PF " ", M.words[i]);
+        }
+        printf("\n");
+    }
     // //call preprocessor 
 
     return 0;
