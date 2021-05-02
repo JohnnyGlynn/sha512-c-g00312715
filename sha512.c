@@ -7,6 +7,8 @@
 #define BYTE uint8_t
 #define PF PRIX64
 
+#define MESSAGE_BLOCK_SIZE 128
+
 //preprocessor version of ch (no overhead)
 #define CH(x,y,z) (x&y)^(~x&z)
 #define MAJ(x,y,z) (x&y)^(x&z)^(y&z)
@@ -55,18 +57,33 @@ WORD H[] = {
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
 };
 
+enum Status{
+    READ, PAD, END
+};
+
 union Block{
     BYTE bytes[128]; //1024 bits == 128 Bytes. 128 x 8 = 1024
     WORD words[16]; //16 64 bit words == 1024 bits/128 Bytes. 16 x 64 = 1024
     __uint128_t msglen[8]; //message lenght. 8 x 128 = 1024 
+    //uint64_t msglen[16]; //16 x 64 = 1024
 };
 
 //cant change array size (sort of)
 // union Block chain[] = {};
+//unsigned int padding(FILE *f, union Block *B, enum Status *S, __uint128_t *nobits){
+unsigned int padding(FILE *f, union Block *B, __uint128_t *nobits){
 
-unsigned int padding(){
+    //bytes read
+    ssize_t nobytes;
+
+    nobytes = fread(B->bytes, 1, 128, f);
 
     //get lenght L of input message M in bits
+    *nobits = *nobits + (8 * nobytes);
+
+    if (nobytes == 43){
+        printf("Hello there");
+    };
 
     //append 1 bit at message end
 
@@ -82,7 +99,12 @@ unsigned int padding(){
 
     // Append the length of the message as a 128 bit block
 
-    return 0;
+    
+
+    return 1;
+
+
+
 }
 
 
@@ -92,16 +114,24 @@ unsigned int preprocessor(){
 }
 
 
-int main(char *argv[]) {
-
+int main(int argc, char *argv[]) {
+    //int i;
+    union Block M;
     //File pointer
     FILE *f;
 
+    __uint128_t nobits = 0;
+
     //open file
     f = fopen(argv[1], "r");
+    if (f == NULL) {
+        perror("Error occured when opening file: ");
+        return 1;
+    }
 
-    //call preprocessor 
+    padding(f, &M, &nobits);
 
+    // //call preprocessor 
 
     return 0;
 }
