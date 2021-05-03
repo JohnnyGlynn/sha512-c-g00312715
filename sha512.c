@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <inttypes.h>
+#include <stdlib.h>
+
+const int _i = 1;
+#define islilend() ((*(char*)&_i) != 0)
 
 #define W64 64
 
@@ -71,7 +75,7 @@ union Block{
 //cant change array size (sort of)
 // union Block chain[] = {};
 //unsigned int padding(FILE *f, union Block *B, enum Status *S, __uint128_t *nobits){
-unsigned int padding(FILE *f, union Block *M, __uint128_t *nobits, enum Status *FLAG){
+unsigned int padding(FILE *f, union Block *M, uint64_t *nobits, enum Status *FLAG){
 
     //bytes read
     ssize_t nobytes;
@@ -156,20 +160,80 @@ unsigned int padding(FILE *f, union Block *M, __uint128_t *nobits, enum Status *
 
 
 
-unsigned int hash(){
+unsigned int hash(union Block *M, WORD H[]){
+
+    //message schedule
+    WORD W[80];
+
+    //iterator for W
+    int t;
+
+    //temp Vars
+    WORD a, b, c, d, e, f, g, h, T1, T2;
+
+    //step 1, Section 6.2.2, part 1
+    for(t=0; t<16; t++)
+        // W[t] = M[t]; need to address the item in the union
+        W[t] = M->words[t];
+
+    for (t = 16; t <  80; t++)
+        W[t] = Sig1(W[t-2]) + W[t-7] + Sig0(W[t-15]) + W[t-16];
+    
+    //part 2
+    a = H[0]; b = H[1]; c = H[2]; d = H[3]; 
+    e = H[4]; f = H[5]; g = H[6]; h = H[7];
+
+    //part 3
+    for (t = 0; t < 80; t++){
+        T1 = h + SIG1(e) +CH(e, f, g) + K[t] + W[t];
+        T2 = SIG0(a) + MAJ(a, b, c);
+
+        h = g; g = f; f = e; e = d + T1;
+        d = c; c = b; b = a; a = T1 + T2;
+    }
+
+    //part4
+    H[0] = a + H[0];
+    H[1] = b + H[1];
+    H[2] = c + H[2];
+    H[3] = d + H[3];
+    H[4] = e + H[4];
+    H[5] = f + H[5];
+    H[6] = g + H[6];
+    H[7] = h + H[7];
+
+    return 0;
+}
+
+int sha512(FILE *f, WORD H[]){
+    int i;
+    union Block M;
+    uint64_t nobits = 0;
+    enum Status FLAG = READ;
+
+    // Loop through the (preprocessed) blocks.
+    // while (next_block(f, &M, &S, &nobits)) {
+    //     next_hash(&M, H);
+    // }
+
+    // while(padding(f, &M, &nobits, &FLAG)){
+    //     for(i = 0; i < 64; i++){
+    //         printf("%08" PF " ", M.words[i]);
+    //     }
+    //     printf("\n");
+    // }
+    
+    while (padding(f, &M, &nobits, &FLAG)) {
+        hash(&M, H);
+    }
+
     return 0;
 }
 
 
 int main(int argc, char *argv[]) {
-    int i;
-    union Block M;
     //File pointer
     FILE *f;
-
-    enum Status FLAG = READ;
-
-    __uint128_t nobits = 0;
 
     //open file
     f = fopen(argv[1], "r");
@@ -178,13 +242,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    while(padding(f, &M, &nobits, &FLAG)){
-        for(i = 0; i < 32; i++){
-            printf("%08" PF " ", M.words[i]);
-        }
-        printf("\n");
-    }
-    // //call preprocessor 
+    sha512(f, H);
+
+    for (int i = 0; i < 8; i++)
+        printf("%08" PF, H[i]);
+    printf("\n");
+
+    fclose(f);
 
     return 0;
 }
