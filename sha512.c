@@ -143,18 +143,6 @@ int padding(FILE *f, union Block *M, uint64_t *nobits, enum Status *FLAG){
         *FLAG = END;
     }
 
-    // //verify test.txt bytes
-    // if (nobytes == 43){
-    //     printf("Hello there\n");
-    // };
-    // //verify test.txt bits
-    // if (*nobits == 344){
-    //     printf("General Kenobi\n");
-    // }
-    // if (l1 == 346){ //not great
-    //     printf("345 bits\n");
-    // }
-
     // Swap the byte order of the words if we're little endian.
     // if (islilend())
     //     for (int i = 0; i < 16; i++)
