@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <inttypes.h>
-#include <stdlib.h>
+//byteswap.h not present in MacOS/clang, functionality in OSByteOrder
+//https://bugs.freedesktop.org/show_bug.cgi?id=8882
+#include <libkern/OSByteOrder.h>
+#define bswap_32 OSSwapInt32
+#define bswap_64 OSSwapInt64
+#define bswap_128 OSSwapInt128
 
 const int _i = 1;
 #define islilend() ((*(char*)&_i) != 0)
@@ -9,25 +14,25 @@ const int _i = 1;
 
 #define WORD uint64_t
 #define BYTE uint8_t
-#define PF PRIX64
+#define PF PRIx64
 
 #define MESSAGE_BLOCK_SIZE 128
 
 //preprocessor version of ch (no overhead)
-#define CH(x,y,z) (x&y)^(~x&z)
-#define MAJ(x,y,z) (x&y)^(x&z)^(y&z)
+#define CH(_x,_y,_z) ((_x & _y) ^ (~_x & _z))
+#define MAJ(_x,_y,_z) ((_x & _y) ^ (_x & _z) ^ (_y & _z))
 
 //Rotate will put the same bit off one end to the other, shift will just add zeros
-#define ROTL(x,n) (x<<n)|(x>>(W64-n))
-#define ROTR(x,n) (x>>n)|(x<<(W64-n))
+#define ROTL(_x,_n) ((_x << _n) | (_x >> ((sizeof(_x)*8) - _n)))
+#define ROTR(_x,_n) ((_x >> _n) | (_x << ((sizeof(_x)*8) - _n)))
 //literally just shift right
-#define SHR(x,n) x>>n
+#define SHR(_x,_n) (_x >> _n)
 
 //512 functions
-#define SIG0(x) ROTR(x,28)^ROTR(x,34)^ROTR(x,39)
-#define SIG1(x) ROTR(x,14)^ROTR(x,18)^ROTR(x,41)
-#define Sig0(x) ROTR(x,1)^ROTR(x,8)^SHR(x,7)
-#define Sig1(x) ROTR(x,19)^ROTR(x,61)^SHR(x,6)
+#define SIG0(_x) ROTR(_x,28) ^ ROTR(_x,34) ^ ROTR(_x,39)
+#define SIG1(_x) ROTR(_x,14) ^ ROTR(_x,18) ^ ROTR(_x,41)
+#define Sig0(_x) ROTR(_x,1) ^ ROTR(_x,8) ^ SHR(_x,7)
+#define Sig1(_x) ROTR(_x,19) ^ ROTR(_x,61) ^ SHR(_x,6)
 
 const WORD K[] = {
 
@@ -68,7 +73,7 @@ enum Status{
 union Block{
     BYTE bytes[128]; //1024 bits == 128 Bytes. 128 x 8 = 1024
     WORD words[16]; //16 64 bit words == 1024 bits/128 Bytes. 16 x 64 = 1024
-    // __uint128_t msglen[8]; //message lenght. 8 x 128 = 1024 
+    //__uint128_t msglen[8]; //message lenght. 8 x 128 = 1024 
     uint64_t msglen[16]; //16 x 64 = 1024
 };
 
@@ -114,7 +119,7 @@ unsigned int padding(FILE *f, union Block *M, uint64_t *nobits, enum Status *FLA
                 M->bytes[nobytes] = 0x00; // In bits: 00000000
             }
             
-            M->msglen[15] = *nobits;
+            M->msglen[15] = (islilend() ? bswap_64(*nobits) : *nobits);
             printf("last block\n");
 
             // Say this is the last block.
@@ -137,7 +142,7 @@ unsigned int padding(FILE *f, union Block *M, uint64_t *nobits, enum Status *FLA
             M->bytes[nobytes] = 0x00; // In bits: 00000000
         }
         // Append nobits as a big endian integer.
-        M->msglen[15] = *nobits;
+        M->msglen[15] = (islilend() ? bswap_64(*nobits) : *nobits);
         // Change the status to END.
         *FLAG = END;
     }
@@ -153,6 +158,13 @@ unsigned int padding(FILE *f, union Block *M, uint64_t *nobits, enum Status *FLA
     // if (l1 == 346){ //not great
     //     printf("345 bits\n");
     // }
+
+    // Swap the byte order of the words if we're little endian.
+    if (islilend())
+        for (int i = 0; i < 16; i++)
+            M->words[i] = bswap_64(M->words[i]);
+
+
 
     return 1;
 
@@ -185,7 +197,7 @@ unsigned int hash(union Block *M, WORD H[]){
 
     //part 3
     for (t = 0; t < 80; t++){
-        T1 = h + SIG1(e) +CH(e, f, g) + K[t] + W[t];
+        T1 = h + SIG1(e) + CH(e, f, g) + K[t] + W[t];
         T2 = SIG0(a) + MAJ(a, b, c);
 
         h = g; g = f; f = e; e = d + T1;
